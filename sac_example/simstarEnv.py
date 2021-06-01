@@ -16,12 +16,11 @@ except ImportError:
 
 
 class SimstarEnv(gym.Env):
-    def __init__(self,track=simstar.Environments.DutchGrandPrix):
-
-        self.number_of_lanes = 3 # total number of lanes on the track
-        self.custom_track = False # True: makes custom circular track; False: creates actual track
+    def __init__(self,track=simstar.Environments.DutchGrandPrix,
+            add_opponents=False,synronized_mode=False,speed_up=1,
+            host="127.0.0.1",port=8080):
         
-        self.add_opponents = True # True: adds opponent vehicles; False: removes opponent vehicles
+        self.add_opponents = add_opponents # True: adds opponent vehicles; False: removes opponent vehicles
         self.number_of_opponents = 6 # agent_locations, agent_speeds, and lane_ids sizes has to be the same
         self.agent_locations = [-10, -20, -10, 0, 10, 0] # opponents' meters offset relative to ego vehicle
         self.agent_speeds = [45, 80, 55, 100, 40, 60] # opponent vehicle speeds in km/hr
@@ -29,7 +28,6 @@ class SimstarEnv(gym.Env):
         
         self.ego_lane_id = 2 # make sure that ego vehicle lane id is not greater than number of lanes
         self.ego_start_offset = 25 # ego vehicle's offset from the starting point of the road
-        self.set_ego_speed = 50 # km/hr
         self.default_speed = 120 # km/hr
         self.road_width = 10
 
@@ -44,9 +42,11 @@ class SimstarEnv(gym.Env):
         # the type of race track to generate 
         self.track_name = track
         
-        self.synronized_mode = False # simulator waits for update signal from client if enabled
-        self.speed_up = 1 # how faster should simulation run. up to 10x. down to 0.1x
-        self.client = simstar.Client(host="127.0.0.1", port=8080)
+        self.synronized_mode = synronized_mode # simulator waits for update signal from client if enabled
+        self.speed_up = speed_up # how faster should simulation run. up to 6x. 
+        self.host = host
+        self.port = port
+        self.client = simstar.Client(host=self.host, port=self.port)
 
         try:
             self.client.ping()
@@ -89,9 +89,6 @@ class SimstarEnv(gym.Env):
         time.sleep(0.75)
 
         self.time_step = 0
-
-        pose = self.client.get_pose_of_point_along_road_spline(self.road, lane_id=self.ego_lane_id, distance=self.ego_start_offset)
-        #print("[SimstarEnv] pose along spline is: ", pose)
         
         # delete all the actors 
         self.client.remove_actors(self.actor_list)
