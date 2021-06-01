@@ -145,3 +145,19 @@ Example track start:
 ![hungary_track](PythonAPI/img/hungary.png)
 
 Hungary Grand Prix track. 
+
+
+# Change Camera View
+
+Camera View can be changed in two ways.
+
+- Already attached camera view can be changed from vehicle by pressing **C**
+
+- New camera position can be set via API as below: 
+
+```python
+client.adjust_view(x_in_m, y_in_m, z_in_m, 
+                    roll=0, pitch=0, yaw=0, fov=90.0):
+```
+
+
