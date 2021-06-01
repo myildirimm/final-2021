@@ -112,7 +112,7 @@ class Client():
 
                 
     def open_env(self, env):
-        self.client.call("OpenEnvironment", Environments(env).name)
+        self.client.call("OpenEnvironment", env)
         self.reconnect_clients()
     
     def adjust_view(self, x_in_m, y_in_m, z_in_m, 

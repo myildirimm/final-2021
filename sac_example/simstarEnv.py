@@ -16,7 +16,7 @@ except ImportError:
 
 
 class SimstarEnv(gym.Env):
-    def __init__(self):
+    def __init__(self,track=simstar.Environments.DutchGrandPrix):
 
         self.number_of_lanes = 3 # total number of lanes on the track
         self.custom_track = False # True: makes custom circular track; False: creates actual track
@@ -33,6 +33,7 @@ class SimstarEnv(gym.Env):
         self.default_speed = 120 # km/hr
         self.road_width = 10
 
+
         self.track_sensor_size = 19
         self.opponent_sensor_size = 12
         
@@ -41,11 +42,10 @@ class SimstarEnv(gym.Env):
         self.termination_limit_progress = 5 # if progress of the ego vehicle is less than 5 for 100 steps, terminate
 
         # the type of race track to generate 
-        self.track_name = simstar.TrackName.HungaryGrandPrix
+        self.track_name = track
         
         self.synronized_mode = False # simulator waits for update signal from client if enabled
         self.speed_up = 1 # how faster should simulation run. up to 10x. down to 0.1x
-        self.width_scale = 1.5 # the scale of the road width
         self.client = simstar.Client(host="127.0.0.1", port=8080)
 
         try:
@@ -53,42 +53,24 @@ class SimstarEnv(gym.Env):
         except:
             print("******* Make sure a Simstar instance is open and running *******")
         
-        self.client.open_env(simstar.Environments.Highway)
-
+        self.client.open_env(self.track_name)
+        
         print("[SimstarEnv] initializing environment")
         time.sleep(5)
-
-        if self.custom_track:
-            # number of lanes can be 2, 3, 4 or 5 (5 is not a 5 lane road but a special 2 lane road)
-            self.road = self.client.create_road_generator(number_of_lanes=self.number_of_lanes, spawn_location = simstar.WayPoint(0.0, 0.0, -4.0))
-
-            # making a circular road
-            self.road.add_road(radius=500, angle=0)
-            self.road.add_road(radius=500, angle=180)
-            self.road.add_road(radius=500, angle=0)
-            self.road.add_road(radius=500, angle=180)
-
-            self.apply_settings()
-
-        else:
-            self.road = self.client.create_road_generator(number_of_lanes=self.number_of_lanes, spawn_location = simstar.WayPoint(0.0, 0.0, -4.0))
-
-            self.apply_settings()
-
-            # if road network is saved. load. if not, make query and generate
-            try:
-                with open(str(self.track_name)+".pkl", "rb") as fp:
-                    track_points = pickle.load(fp)
-            except:
-                track_points = self.client.generate_race_track(self.track_name)
-                with open(str(self.track_name)+".pkl", "wb") as fp: 
-                    pickle.dump(track_points, fp)
         
-            # generate road network
-            self.client.set_road_network(track_points, width_scale=self.width_scale)
+        # get main road
+        self.road = None
+        all_roads = self.client.get_roads()
+        if len(all_roads)>0:
+            road_main = all_roads[0]
+            road_id = road_main['road_id']
+            self.road = simstar.RoadGenerator(self.client,road_id)
 
         # a list contaning all vehicles 
         self.actor_list = []
+
+        # disable lane change for automated actors
+        self.client.set_lane_change_disabled(is_disabled=True)
 
         #input space. 
         high = np.array([np.inf, np.inf,  1., 1.])
@@ -109,13 +91,23 @@ class SimstarEnv(gym.Env):
         self.time_step = 0
 
         pose = self.client.get_pose_of_point_along_road_spline(self.road, lane_id=self.ego_lane_id, distance=self.ego_start_offset)
-        print("[SimstarEnv] pose along spline is: ", pose)
+        #print("[SimstarEnv] pose along spline is: ", pose)
         
         # delete all the actors 
         self.client.remove_actors(self.actor_list)
         self.actor_list.clear()
        
-        self.main_vehicle = self.client.spawn_vehicle(distance=self.ego_start_offset, lane_id=self.ego_lane_id, initial_speed=0, set_speed=self.set_ego_speed)
+        # spawn a vehicle
+        if self.track_name == simstar.Environments.DutchGrandPrix:
+            vehicle_pose = simstar.PoseData(
+                -603.631592, -225.756531, -3.999999,yaw=20/50)
+            self.main_vehicle  = self.client.spawn_vehicle_to(vehicle_pose,
+                initial_speed=0,set_speed=0,
+                vehicle_type = simstar.EVehicleType.F1Racing)
+        else:
+            self.main_vehicle = self.client.spawn_vehicle(distance=150,lane_id=1,
+                initial_speed=0,set_speed=0,
+                vehicle_type = simstar.EVehicleType.Sedan1)
         print("[SimstarEnv] main v ID: ",self.main_vehicle.get_ID())
 
         # add all actors to the acor list

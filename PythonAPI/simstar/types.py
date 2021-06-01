@@ -1,12 +1,9 @@
 # -*- coding: utf-8 -*-
 from enum import Enum
 
-class Environments(Enum):
-    Highway = 0
-    OffRoad = 1
-    DownTown = 2
-    ParkingLot = 3
-    DutchGrandPrix = 4
+class Environments():
+    DutchGrandPrix = "DutchGrandPrix"
+    HungaryGrandPrix = "HungaryGrandPrix"
     
 
 class EDriverProfile():

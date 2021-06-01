@@ -24,7 +24,7 @@ if __name__ == "__main__":
         datefmt='%Y-%m-%d %H:%M:%S')
     
     logging.info("simstar env init")
-    env  = SimstarEnv(track=simstar.TrackName.DutchGrandPrix)
+    env  = SimstarEnv(track=simstar.Environments.DutchGrandPrix)
     agent = Agent(dim_action=2)
 
     logging.info("entering main loop")
