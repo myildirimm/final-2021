@@ -133,15 +133,13 @@ There are 2 tracks provided as training tracks and one track provided as validat
 
 Available tracks
 
-- Austria Grand Prix [Validation]
-
 - Dutch Grand Prix [Train]
 
 - Hungarian Grand Prix [Train]
 
 Example track start:
 
-    SimstarEnv(track_name=simstar.TrackName.Austria)
+    SimstarEnv(track=simstar.Environments.DutchGrandPrix)
 
 
 ![hungary_track](../PythonAPI/img/hungary.png)
