@@ -13,11 +13,19 @@ Just click on Simstar.exe and Simstar is ready.
 
 
 ### Linux 
+
+## Requirements
+Install Vulkan Libraries
+	
+	sudo apt-get install vulkan-utils
+
     cd Simstar
   
     chmod 777 -R *
   
     ./Simstar.sh
+
+
 
 ## Requirements
 
@@ -28,7 +36,7 @@ Create a new environment using anaconda.
 
 	conda env create --file environment.yml
 
-	conda activate final604
+	conda activate simstar-env
 
 
 #### Option 2: Install using pip
@@ -38,9 +46,7 @@ Install required python libraries from requirements.txt by
 	pip install -r requirements.txt
 
 
-### Pytorch Installation
-
-Follow the official guide from the [link](https://pytorch.org).
+### Pytorch Version
 
 The final evaluation will be using pytorch version 1.5 and CUDA version 10.2.
 
@@ -72,16 +78,16 @@ Run the following with success.
 
 ### 3. Test Environment Setup
 
-	cd GymEnv
+	cd sac_example
 
 	python example_experiment.py
 
 
 ### Optional Test
 
-To test a closed loop training with Pytorch, you can run the example DDPG agent from examples folder.
+To test a closed loop training with Pytorch, you can run the example SAC agent from examples folder.
 
-	cd examples/pytorch
+	cd sac_example
 
-	python train.py
+	python train_example.py
 
