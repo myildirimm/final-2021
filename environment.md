@@ -4,7 +4,7 @@
 
 A sensor to get track information. Covers 180 degrees of the vehicle's front. 19 returns with maximum of 200m range. 
 
-![track](../PythonAPI/img/track.png)
+![track](PythonAPI/img/track.png)
 
     track_sensor.get_measurements()
 
@@ -12,7 +12,7 @@ A sensor to get track information. Covers 180 degrees of the vehicle's front. 19
 
 A sensor that only detects other vehicles. 36 return from 360 degrees with 200m range. 
 
-![opponent](../PythonAPI/img/opponent.png)
+![opponent](PythonAPI/img/opponent.png)
     opponents_sensor.get_measurements()
 
 ## Road Deviation Sensor
@@ -142,6 +142,6 @@ Example track start:
     SimstarEnv(track=simstar.Environments.DutchGrandPrix)
 
 
-![hungary_track](../PythonAPI/img/hungary.png)
+![hungary_track](PythonAPI/img/hungary.png)
 
 Hungary Grand Prix track. 
