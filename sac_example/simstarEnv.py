@@ -100,7 +100,7 @@ class SimstarEnv(gym.Env):
                 -603.631592, -225.756531, -3.999999,yaw=20/50)
             self.main_vehicle  = self.client.spawn_vehicle_to(vehicle_pose,
                 initial_speed=0,set_speed=0,
-                vehicle_type = simstar.EVehicleType.F1Racing)
+                vehicle_type = simstar.EVehicleType.Sedan1)
         else:
             self.main_vehicle = self.client.spawn_vehicle(distance=150,lane_id=1,
                 initial_speed=0,set_speed=0,
