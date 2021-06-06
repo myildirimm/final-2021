@@ -11,28 +11,19 @@ from model import Model
 # training mode: 1      evaluation mode: 0
 TRAIN = 1
 
-# ./ trained_model / EVALUATION_NAME_{EVALUATION_REWARD}
+# ./ EVALUATION_NAME_{EVALUATION_REWARD}
 EVALUATION_REWARD = 79025
 
 # "best" or "checkpoint"
 EVALUATION_NAME = "best"
 
-# ./ model_name / TRAINED_FOLDER
-TRAINED_FOLDER = "best_sac"
-
-# if true, then opponent sensor will be used
-IS_OPPONENT_SENSOR = True
-
 
 def train():
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
     env = SimstarEnv()
     insize = 4 + env.track_sensor_size
     outsize = env.action_space.shape[0]
 
-    if IS_OPPONENT_SENSOR:
-        insize += env.opponent_sensor_size
+    insize += env.opponent_sensor_size
 
     hyperparams = {
         "lrvalue": 0.0005,
@@ -59,13 +50,12 @@ def train():
     HyperParams = namedtuple("HyperParams", hyperparams.keys())
     hyprm = HyperParams(**hyperparams)
 
-    agent = Model(env, hyprm, insize, outsize, device)
+    agent = Model(env, hyprm, insize, outsize)
     
     if TRAIN:
-        #load_model(model_name=model_name, folder_name=TRAINED_FOLDER, agent=agent, reward=EVALUATION_REWARD, name=EVALUATION_NAME)
         writer = SummaryWriter(comment="_model")
     else:
-        load_model(folder_name=TRAINED_FOLDER, agent=agent, reward=EVALUATION_REWARD, name=EVALUATION_NAME)
+        load_model(agent=agent, reward=EVALUATION_REWARD, name=EVALUATION_NAME)
 
     best_reward = 0.0
     average_reward = 0.0
@@ -75,11 +65,7 @@ def train():
 
     for eps in range(hyprm.episodes):
         obs = env.reset()
-
-        if IS_OPPONENT_SENSOR:
-            state = np.hstack((obs.angle, obs.speedX, obs.speedY, obs.opponents, obs.track, obs.trackPos))
-        else:
-            state = np.hstack((obs.angle, obs.speedX, obs.speedY, obs.track, obs.trackPos))
+        state = np.hstack((obs.angle, obs.speedX, obs.speedY, obs.opponents, obs.track, obs.trackPos))
 
         episode_reward = 0.0
 
@@ -88,11 +74,8 @@ def train():
             action = np.array(agent.select_action(state=state))
             obs, reward, done, _ = env.step(action)
 
-            if IS_OPPONENT_SENSOR:
-                next_state = np.hstack((obs.angle, obs.speedX, obs.speedY, obs.opponents, obs.track, obs.trackPos))
-            else:
-                next_state = np.hstack((obs.angle, obs.speedX, obs.speedY, obs.track, obs.trackPos))
-            
+            next_state = np.hstack((obs.angle, obs.speedX, obs.speedY, obs.opponents, obs.track, obs.trackPos))
+
             if (math.isnan(reward)):
                 print("\nBad Reward Found\n")
                 break
@@ -165,9 +148,9 @@ def save_model(agent, reward, name):
         }, path)
 
 
-def load_model(folder_name, agent, reward, name):
+def load_model(agent, reward, name):
     try:
-        path = "trained_models/" + folder_name + "/" + name + "_" + str(int(reward)) + ".dat"
+        path = "trained_models/" + name + "_" + str(int(reward)) + ".dat"
         checkpoint = torch.load(path)
 
         agent.actor.load_state_dict(checkpoint['actor_state_dict'])

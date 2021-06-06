@@ -6,13 +6,12 @@ from torch.autograd import Variable
 
 
 class Model(torch.nn.Module):
-    def __init__(self, env, params, n_insize, n_outsize, device):
+    def __init__(self, env, params, n_insize, n_outsize):
         super().__init__()
         self.n_states = n_insize
         self.n_actions = n_outsize
         self.gamma = params.gamma
         self.tau = params.tau
-        self.device = device
         self.alpha = params.alpha
         self.hidden_size = params.hidden
 
