@@ -142,8 +142,8 @@ def save_model(agent, reward, name):
 
     torch.save({
         'actor_state_dict': agent.actor.state_dict(),
-        'critic1_state_dict': agent.critic1.state_dict(),
-        'critic2_state_dict': agent.critic2.state_dict(),
+        'critic_1_state_dict': agent.critic_1.state_dict(),
+        'critic_2_state_dict': agent.critic_2.state_dict(),
         'episode_reward': reward
         }, path)
 
@@ -154,8 +154,8 @@ def load_model(agent, reward, name):
         checkpoint = torch.load(path)
 
         agent.actor.load_state_dict(checkpoint['actor_state_dict'])
-        agent.critic1.load_state_dict(checkpoint['critic1_state_dict'])
-        agent.critic2.load_state_dict(checkpoint['critic2_state_dict'])
+        agent.critic_1.load_state_dict(checkpoint['critic_1_state_dict'])
+        agent.critic_2.load_state_dict(checkpoint['critic_2_state_dict'])
 
     except FileNotFoundError:
         print("Checkpoint Not Found")
