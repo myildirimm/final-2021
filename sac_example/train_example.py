@@ -5,7 +5,33 @@ import argparse
 from collections import namedtuple
 from tensorboardX import SummaryWriter
 from simstarEnv import SimstarEnv
+import simstar
 from model import Model
+
+import wandb
+
+
+
+TRACK_NAME = simstar.Environments.CircularRoad
+PORT = 8081
+HOST = "127.0.0.1"
+WITH_OPPONENT = False
+SYNC_MODE = True
+SPEED_UP = 6
+
+# check if simstar open 
+try:
+    simstar.Client(host=HOST, port=PORT)
+except simstar.TimeoutError or simstar.TransportError :
+    raise simstar.TransportError("******* Make sure a Simstar instance is open and running at port %d*******"%(PORT))
+
+wandb.init(project='final-p', entity='ferhatmelih', config={
+    "TRACK_NAME": TRACK_NAME,
+    "PORT": 8081,
+    'WITH_OPPONENT':WITH_OPPONENT,
+    'SPEED_UP':SPEED_UP,
+})
+wandb_config = wandb.config
 
 
 # training mode: 1      evaluation mode: 0
@@ -27,7 +53,9 @@ IS_OPPONENT_SENSOR = True
 def train():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    env = SimstarEnv()
+    env = SimstarEnv(track=TRACK_NAME,
+            add_opponents=WITH_OPPONENT,synronized_mode=SYNC_MODE,speed_up=SPEED_UP,
+            port=PORT)
     insize = 4 + env.track_sensor_size
     outsize = env.action_space.shape[0]
 
@@ -120,6 +148,7 @@ def train():
         average_reward = torch.mean(torch.tensor(total_reward[-20:])).item()
 
         total_steps = total_steps + step
+        lap_progress = env.progress_on_road
 
         if TRAIN:
             if (eps+1) % 100 == 0:
@@ -131,7 +160,8 @@ def train():
                 best_reward = episode_reward
                 save_model(agent=agent, reward=best_reward, name="best")
         
-            tensorboard_writer(writer, eps+1, step, total_average_reward, average_reward, episode_reward, best_reward, total_steps)
+        
+            tensorboard_writer(writer, eps+1, step, total_average_reward, average_reward, episode_reward, best_reward, total_steps,lap_progress)
 
         print("\nProcess: {:2.1f}%, Total Steps: {:d},  Episode Reward: {:2.3f},  Best Reward: {:2.2f},  Total Average Reward: {:2.2f}\n".format(process, total_steps, episode_reward, best_reward, total_average_reward), flush=True)
     print("")
@@ -143,7 +173,8 @@ def average_calculation(prev_avg, num_episodes, new_val):
     return np.float(total / num_episodes)
 
 
-def tensorboard_writer(writer, eps, step_number, total_average_reward, average_reward, episode_reward, best_reward, total_steps):
+def tensorboard_writer(writer, eps, step_number, total_average_reward, average_reward, episode_reward, best_reward, total_steps,
+    lap_progress):
     writer.add_scalar("step number - episode" , step_number, eps)
     writer.add_scalar("episode reward", episode_reward, eps)
     writer.add_scalar("average reward - episode", average_reward, eps)
@@ -152,6 +183,17 @@ def tensorboard_writer(writer, eps, step_number, total_average_reward, average_r
     writer.add_scalar("total average reward - total steps", total_average_reward, total_steps)
     writer.add_scalar("best reward - episode", best_reward, eps)
     writer.add_scalar("best reward - total steps", best_reward, total_steps)
+
+    wandb.log({"step number":step_number,"episode":eps,"episode reward": episode_reward,
+        "average reward": average_reward, "total average reward":total_average_reward, 
+        "best reward": best_reward, "total_steps":total_steps,
+        "lap_progress":lap_progress
+        })
+
+
+
+
+
 
 
 def save_model(agent, reward, name):

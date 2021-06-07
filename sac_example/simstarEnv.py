@@ -47,12 +47,13 @@ class SimstarEnv(gym.Env):
         self.speed_up = speed_up # how faster should simulation run. up to 6x. 
         self.host = host
         self.port = port
-        self.client = simstar.Client(host=self.host, port=self.port)
+        
 
         try:
+            self.client = simstar.Client(host=self.host, port=self.port)
             self.client.ping()
-        except:
-            print("******* Make sure a Simstar instance is open and running *******")
+        except (simstar.TransportError or simstar.TimeoutError):
+            raise simstar.TransportError("******* Make sure a Simstar instance is open and running at port %d*******",self.port)
         
         self.client.open_env(self.track_name)
         
@@ -209,7 +210,7 @@ class SimstarEnv(gym.Env):
         else:
             self.time_step = 0
 
-        self.progress_on_road = env.main_vehicle.get_progress_on_road()
+        self.progress_on_road = self.main_vehicle.get_progress_on_road()
         if self.progress_on_road > 1:
             print("[SimstarEnv] finished lap")
             done = True
