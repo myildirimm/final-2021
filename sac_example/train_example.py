@@ -19,6 +19,7 @@ EVALUATION_NAME = "best"
 
 import wandb
 import simstar
+import sys
 
 
 TRACK_NAME = simstar.Environments.CircularRoad
@@ -27,6 +28,11 @@ HOST = "127.0.0.1"
 WITH_OPPONENT = False
 SYNC_MODE = True
 SPEED_UP = 6
+
+if len(sys.argv)>1:
+    PORT = int(sys.argv[1])
+    print("Override PORT",PORT)
+
 
 # check if simstar open 
 try:
@@ -143,7 +149,7 @@ def train():
                 best_reward = episode_reward
                 save_model(agent=agent, reward=best_reward, name="best")
         
-            tensorboard_writer(writer, eps+1, step, total_average_reward, average_reward, episode_reward, best_reward, total_steps)
+            tensorboard_writer(writer, eps+1, step, total_average_reward, average_reward, episode_reward, best_reward, total_steps,lap_progress)
 
         print("\nProcess: {:2.1f}%, Total Steps: {:d},  Episode Reward: {:2.3f},  Best Reward: {:2.2f},  Total Average Reward: {:2.2f}\n".format(process, total_steps, episode_reward, best_reward, total_average_reward), flush=True)
     print("")
