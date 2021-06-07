@@ -210,6 +210,10 @@ class SimstarEnv(gym.Env):
             self.time_step = 0
 
         self.progress_on_road = self.main_vehicle.get_progress_on_road()
+
+        if self.progress_on_road == 1.0:
+            self.progress_on_road = 0.0
+
         if self.progress_on_road > 1:
             print("[SimstarEnv] finished lap")
             done = True

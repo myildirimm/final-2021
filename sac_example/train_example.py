@@ -131,6 +131,7 @@ def train():
         average_reward = torch.mean(torch.tensor(total_reward[-20:])).item()
 
         total_steps = total_steps + step
+        lap_progress = env.progress_on_road
 
         if TRAIN:
             if (eps+1) % 100 == 0:
@@ -154,7 +155,8 @@ def average_calculation(prev_avg, num_episodes, new_val):
     return np.float(total / num_episodes)
 
 
-def tensorboard_writer(writer, eps, step_number, total_average_reward, average_reward, episode_reward, best_reward, total_steps):
+def tensorboard_writer(writer, eps, step_number, total_average_reward, average_reward, episode_reward, best_reward, total_steps,
+    lap_progress):
     writer.add_scalar("step number - episode" , step_number, eps)
     writer.add_scalar("episode reward", episode_reward, eps)
     writer.add_scalar("average reward - episode", average_reward, eps)
@@ -163,6 +165,17 @@ def tensorboard_writer(writer, eps, step_number, total_average_reward, average_r
     writer.add_scalar("total average reward - total steps", total_average_reward, total_steps)
     writer.add_scalar("best reward - episode", best_reward, eps)
     writer.add_scalar("best reward - total steps", best_reward, total_steps)
+
+    wandb.log({"step number":step_number,"episode":eps,"episode reward": episode_reward,
+        "average reward": average_reward, "total average reward":total_average_reward, 
+        "best reward": best_reward, "total_steps":total_steps,
+        "lap_progress":lap_progress
+        })
+
+
+
+
+
 
 
 def save_model(agent, reward, name):
