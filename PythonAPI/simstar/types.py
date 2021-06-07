@@ -4,6 +4,8 @@ from enum import Enum
 class Environments():
     DutchGrandPrix = "DutchGrandPrix"
     HungaryGrandPrix = "HungaryGrandPrix"
+    StraightRoad = "StraightRoad"
+    CircularRoad = "CircularRoad"
     
 
 class EDriverProfile():

@@ -132,6 +132,10 @@ class Vehicle():
 
     def get_physical_properties(self):
         return self.client.call("GetVehiclePhysicalProperties", self._ID)
+    
+    def get_progress_on_road(self,road_id = -1):
+        return self.client.call("GetVehicleProgressOnRoad", self._ID,road_id)
+        
 
     def set_physical_properties(self, vehicle_setup):
         self.client.call("SetVehiclePhysicalProperties", self._ID, vehicle_setup)

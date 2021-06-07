@@ -172,7 +172,8 @@ class SimstarEnv(gym.Env):
         # progress = spx * (np.cos(angle) - np.abs(np.sin(angle)) - np.abs(trackPos))
         progress = spx * (np.cos(angle) - np.abs(np.sin(angle)))
         reward = progress
-
+        print("spx",spx)
+        print("speed:",self.main_vehicle.get_speed())
         # for debuggging purposes
         #print("angle: %2.2f,speed %2.2f, trackPos %2.2f"%(angle,sp,trackPos))
         #print("[SimstarEnv] term1 %2.2f, term2 %2.2f, term3 %2.2f, spx %2.2f, spy%2.2f"%(np.cos(angle) ,-np.abs(np.sin(angle)), -np.abs(trackPos),spx,spy ))
@@ -207,6 +208,11 @@ class SimstarEnv(gym.Env):
                 done = True
         else:
             self.time_step = 0
+
+        self.progress_on_road = self.main_vehicle.get_progress_on_road()
+        if self.progress_on_road > 1:
+            print("[SimstarEnv] finished lap")
+            done = True
 
         self.time_step += 1
         

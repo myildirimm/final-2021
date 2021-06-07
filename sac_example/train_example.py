@@ -17,9 +17,37 @@ EVALUATION_REWARD = 79025
 # "best" or "checkpoint"
 EVALUATION_NAME = "best"
 
+import wandb
+import simstar
+
+
+TRACK_NAME = simstar.Environments.CircularRoad
+PORT = 8080
+HOST = "127.0.0.1"
+WITH_OPPONENT = False
+SYNC_MODE = True
+SPEED_UP = 6
+
+# check if simstar open 
+try:
+    simstar.Client(host=HOST, port=PORT)
+except simstar.TimeoutError or simstar.TransportError :
+    raise simstar.TransportError("******* Make sure a Simstar instance is open and running at port %d*******"%(PORT))
+
+wandb.init(project='final-p', entity='ferhatmelih', config={
+    "TRACK_NAME": TRACK_NAME,
+    "PORT": PORT,
+    'WITH_OPPONENT':WITH_OPPONENT,
+    'SPEED_UP':SPEED_UP,
+})
+wandb_config = wandb.config
+
+
 
 def train():
-    env = SimstarEnv()
+    env = SimstarEnv(track=TRACK_NAME,
+            add_opponents=WITH_OPPONENT,synronized_mode=SYNC_MODE,speed_up=SPEED_UP,
+            host=HOST,port=PORT)
     insize = 4 + env.track_sensor_size
     outsize = env.action_space.shape[0]
 
