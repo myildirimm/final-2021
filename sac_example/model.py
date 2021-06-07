@@ -17,8 +17,8 @@ class Model(torch.nn.Module):
         self.hidden_size = params.hidden
 
         # create actor and critic networks
-        self.actor = Actor(self.n_states, self.hidden_size, self.n_actions)
-        self.actor_target = Actor(self.n_states, self.hidden_size, self.n_actions)
+        self.actor = Actor(self.n_states, self.hidden_size, self.n_actions,device)
+        self.actor_target = Actor(self.n_states, self.hidden_size, self.n_actions,device)
         self.critic_1 = Critic(self.n_states + self.n_actions, self.hidden_size, self.n_actions)
         self.critic_target_1 = Critic(self.n_states + self.n_actions, self.hidden_size, self.n_actions)
         self.critic_2 = Critic(self.n_states + self.n_actions, self.hidden_size, self.n_actions)
