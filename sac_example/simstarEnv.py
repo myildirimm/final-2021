@@ -1,3 +1,4 @@
+from enum import EnumMeta
 import gym 
 from gym import spaces
 import collections as col
@@ -208,6 +209,11 @@ class SimstarEnv(gym.Env):
         else:
             self.time_step = 0
 
+        self.progress_on_road = env.main_vehicle.get_progress_on_road()
+        if self.progress_on_road > 1:
+            print("[SimstarEnv] finished lap")
+            done = True
+
         self.time_step += 1
         
         return reward, done
@@ -314,3 +320,12 @@ class SimstarEnv(gym.Env):
         # reset sync mod so that user can interact with simstar
         if(self.synronized_mode):
             self.client.set_sync_mode(False)
+
+if __name__ =='__main__':
+    env = SimstarEnv(simstar.Environments.CircularRoad,add_opponents=True)
+    env.reset()
+    env.main_vehicle.set_controller_type(simstar.DriveType.Keyboard)
+    
+    while 1:
+        pr = env.main_vehicle.get_progress_on_road()
+        print(pr)
