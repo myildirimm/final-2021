@@ -28,23 +28,13 @@ def evaluate(port=8080):
         "lrvalue": 0.0005,
         "lrpolicy": 0.0001,
         "gamma": 0.97,
-        "episodes": 9000,
+        "episodes": 50000,
         "buffersize": 100000,
         "tau": 0.001,
         "batchsize": 64,
-        "start_sigma": 0.3,
-        "end_sigma": 0,
-        "sigma_decay_len": 15000,
-        "theta": 0.15,
-        "polyak": 0.995,
         "alpha": 0.2,
         "maxlength": 10000,
-        "clipgrad": True,
-        "hidden": 256,
-        "total_explore": 300000.0,
-        "epsilon_steady_state": 0.01,
-        "epsilon_start": 0.5,
-        "autopilot_other_agents": True
+        "hidden": 256
     }
     HyperParams = namedtuple("HyperParams", hyperparams.keys())
     hyprm = HyperParams(**hyperparams)
@@ -84,7 +74,7 @@ def evaluate(port=8080):
         total_reward += epsisode_reward
         print("Episode: %d, Reward: %.1f"%(i, epsisode_reward))
     
-    print("Average reward over %d episodes: %.1f"%(NUM_EVAL_EPISODE,total_reward/NUM_EVAL_EPISODE))
+    print("Average reward over %d episodes: %.1f"%(NUM_EVAL_EPISODE, total_reward/NUM_EVAL_EPISODE))
 
 def load_checkpoint(agent): 
     path = "trained_models/master.dat"
