@@ -21,20 +21,20 @@ EVALUATION_REWARD = 123
 EVALUATION_NAME = "best"
 
 # "StraightRoad", "CircularRoad", "DutchGrandPrix", "HungaryGrandPrix"
-TRACK_NAME = simstar.Environments.HungaryGrandPrix
+TRACK_NAME = simstar.Environments.CircularRoad
 
 # port number has to be the same with the SimStar.sh -nullrhi -api-port=PORT
-PORT = 8081
+PORT = 8080
 HOST = "127.0.0.1"
 
 # bot vehicles will be added; the configuration and speed of other vehicles could be changed from simstarEnv.py
 WITH_OPPONENT = True
 
 # when the process is required to be speeded up, the synchronized mode will have to be turned on
-SYNC_MODE = False
+SYNC_MODE = True
 
-# times speeding up the training process [1-10]
-SPEED_UP = 1
+# times speeding up the training process [1-6] 
+SPEED_UP = 6
 
 
 # port number can be updated from console argument
@@ -48,14 +48,6 @@ if not os.path.exists('saved_models'):
     os.mkdir('saved_models')
 if not os.path.exists('trained_models'):
     os.mkdir('trained_models')
-
-
-# check whether simstar is open
-try:
-    simstar.Client(host=HOST, port=PORT)
-except simstar.TimeoutError or simstar.TransportError:
-    raise simstar.TransportError("******* Make sure a Simstar instance is open and running at port %d*******"%(PORT))
-
 
 # NOTE: users should create their own username (entity) and project in https://wandb.ai/
 # initialize data logging configurations

@@ -12,7 +12,9 @@ except ImportError:
 
 
 class SimstarEnv(gym.Env):
-    def __init__(self, track=simstar.Environments.DutchGrandPrix, add_opponents=False, synronized_mode=False, speed_up=1, host="127.0.0.1", port=8080):
+    def __init__(self, track=simstar.Environments.DutchGrandPrix, 
+            add_opponents=False, synronized_mode=False,
+            speed_up=1, host="127.0.0.1", port=8080):
         self.new_reward = True # applies reward configuration as in GTS paper's
         self.spx_prev = 0 # ego vehicle speed at time t-1
         self.c_w = 0.005 # out of track penalty weight
@@ -44,12 +46,17 @@ class SimstarEnv(gym.Env):
         self.speed_up = speed_up # how faster should simulation run. up to 6x. 
         self.host = host
         self.port = port
-        self.client = simstar.Client(host=self.host, port=self.port)
+        
+        self.hz = 10 # fixed control frequency 
+        self.fps = 60 # fixed simulation FPS
+        self.tick_number_to_sample = self.fps/self.hz
+        self.sync_step_num = int(self.tick_number_to_sample/self.speed_up)
 
         try:
+            self.client = simstar.Client(host=self.host, port=self.port)
             self.client.ping()
-        except:
-            print("******* Make sure a Simstar instance is open and running *******")
+        except simstar.TimeoutError or simstar.TransportError:
+            raise simstar.TransportError("******* Make sure a Simstar instance is open and running at port %d*******"%(self.port))
         
         self.client.open_env(self.track_name)
         
@@ -80,7 +87,12 @@ class SimstarEnv(gym.Env):
         self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(2,))
         self.default_action = [0.0, 1.0]
 
+        self.last_step_time = time.time()
+        self.apply_settings()
+
     def apply_settings(self):
+        print("[SimstarEnv] sync: ",self.synronized_mode," speed up: ",self.speed_up)
+        self.client.set_sync_timeout(10)
         self.client.set_sync_mode(self.synronized_mode, self.speed_up)
 
     def reset(self):
@@ -102,6 +114,7 @@ class SimstarEnv(gym.Env):
             self.main_vehicle = self.client.spawn_vehicle(
                 distance=self.ego_start_offset, lane_id=self.ego_lane_id, initial_speed=0, set_speed=self.set_ego_speed, vehicle_type = simstar.EVehicleType.Sedan1)
         
+        self.simstar_step()
         print("[SimstarEnv] main vehicle ID: ",self.main_vehicle.get_ID())
 
         # add all actors to the acor list
@@ -116,7 +129,7 @@ class SimstarEnv(gym.Env):
                     actor=self.main_vehicle, distance=self.agent_locations[i], lane_id=self.lane_ids[i], initial_speed=0, set_speed=self.agent_speeds[i])
 
                 time.sleep(0.2)
-
+                self.simstar_step()
                 # define drive controllers for each agent vehicle
                 new_agent.set_controller_type(simstar.DriveType.Auto)
                 self.actor_list.append(new_agent)
@@ -130,7 +143,8 @@ class SimstarEnv(gym.Env):
 
         # set as display vehicle to follow from simstar
         self.client.display_vehicle(self.main_vehicle)
-
+        
+        self.simstar_step()
         # set drive type as API for ego vehicle
         self.main_vehicle.set_controller_type(simstar.DriveType.API)
         
@@ -142,7 +156,7 @@ class SimstarEnv(gym.Env):
 
         self.track_sensor = self.main_vehicle.add_sensor(simstar.ESensorType.Distance, track_sensor_settings)
         
-        self.simstar_step(2)
+        self.simstar_step()
 
         opponent_sensor_settings = simstar.DistanceSensorParameters(
             enable = True, draw_debug = False, add_noise = False, position=simstar.PositionRPC(2.0, 0.0, 0.4), 
@@ -151,7 +165,7 @@ class SimstarEnv(gym.Env):
 
         self.opponent_sensor = self.main_vehicle.add_sensor(simstar.ESensorType.Distance, opponent_sensor_settings)
 
-        self.simstar_step(2)
+        self.simstar_step()
 
         simstar_obs = self.get_simstar_obs(self.default_action)
         observation = self.make_observation(simstar_obs)
@@ -250,6 +264,9 @@ class SimstarEnv(gym.Env):
         observation = self.make_observation(simstar_obs)
         reward, done,summary = self.calculate_reward(simstar_obs)
         
+        # required to continue simulation in sync mode
+        self.simstar_step()
+        
         return observation, reward, done, summary
 
     def make_observation(self, simstar_obs):
@@ -288,21 +305,26 @@ class SimstarEnv(gym.Env):
 
         self.main_vehicle.control_vehicle(steer=steer, throttle=throttle, brake=brake)
                                 
-    def simstar_step(self, step_num=10):
+    def simstar_step(self):
+        step_num = int(self.sync_step_num)
         if self.synronized_mode:
             while True:
                 tick_completed = self.client.tick_given_times(step_num)
-                time.sleep(0.005)
+                time.sleep(0.001)
                 if(tick_completed):
                     break
         else:
-            time.sleep(1/60*step_num)
+            time_diff_to_be = 1/60*step_num
+            time_diff_actual = time.time()-self.last_step_time
+            time_to_wait = time_diff_to_be - time_diff_actual
+            if time_to_wait>0.0:
+                time.sleep(time_to_wait)
+        self.last_step_time = time.time()
 
     def get_simstar_obs(self, action):
         self.action_to_simstar(action)
 
-        # required to continue simulation in sync mode
-        self.simstar_step()
+        
 
         vehicle_state = self.main_vehicle.get_vehicle_state_self_frame()
         speed_x_kmh = abs(self.ms_to_kmh(float(vehicle_state['velocity']['X_v'])))
