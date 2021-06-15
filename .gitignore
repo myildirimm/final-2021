@@ -27,6 +27,9 @@ PythonAPI/build/
 PythonAPI/PythonAPI.pyproj
 PythonAPI/PythonAPI.sln
 
+runs/*
+wandb/*
+
 node_modules
 yarn-error.log
 package-lock.json
