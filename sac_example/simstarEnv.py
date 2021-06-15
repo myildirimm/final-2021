@@ -161,6 +161,7 @@ class SimstarEnv(gym.Env):
         collision = simstar_obs["damage"]
         reward = 0.0
         done = False
+        summary = {'end_reason':None}
 
         trackPos =  simstar_obs['trackPos']
         angle = simstar_obs['angle']
@@ -185,6 +186,7 @@ class SimstarEnv(gym.Env):
             if progress < self.termination_limit_progress:
                 if self.terminal_judge_start < self.time_step:
                     print("[SimstarEnv] finish episode due to agent is too slow")
+                    summary['end_reason'] = 'too_slow'
                     done = True
             else:
                 self.time_step = 0
@@ -196,6 +198,7 @@ class SimstarEnv(gym.Env):
             # if collision, finish race
             if collision:
                 print("[SimstarEnv] finish episode due to accident")
+                summary['end_reason'] = 'accident'
                 reward = -20/3.6
                 done = True
             
@@ -203,12 +206,14 @@ class SimstarEnv(gym.Env):
             if abs(trackPos) > 1.0:
                 print("[SimstarEnv] finish episode due to road deviation")
                 reward = -20/3.6
+                summary['end_reason'] = 'road_deviation'
                 done = True
                 
             # if the car has returned backward, end race
             if np.cos(angle) < 0.0:
                 print("[SimstarEnv] finish episode due to going backwards")
                 reward = -20/3.6
+                summary['end_reason'] = 'going_backwards'
                 done = True
 
             # if speed of the agent is too high, give penalty
@@ -219,6 +224,7 @@ class SimstarEnv(gym.Env):
             if progress < self.termination_limit_progress:
                 if self.terminal_judge_start < self.time_step:
                     print("[SimstarEnv] finish episode due to agent is too slow")
+                    summary['end_reason'] = 'too_slow'
                     reward = -20/3.6
                     done = True
             else:
@@ -230,19 +236,20 @@ class SimstarEnv(gym.Env):
         if self.progress_on_road == 1.0:
             self.progress_on_road = 0.0
 
-        if self.progress_on_road > 1:
+        if self.progress_on_road > 2:
             print("[SimstarEnv] finished lap")
+            summary['end_reason'] = 'lap_done'
             done = True
 
         self.time_step += 1
         
-        return reward, done
+        return reward, done,summary
 
     def step(self, action):
         simstar_obs = self.get_simstar_obs(action)
         observation = self.make_observation(simstar_obs)
-        reward, done = self.calculate_reward(simstar_obs)
-        summary = {}
+        reward, done,summary = self.calculate_reward(simstar_obs)
+        
         return observation, reward, done, summary
 
     def make_observation(self, simstar_obs):
