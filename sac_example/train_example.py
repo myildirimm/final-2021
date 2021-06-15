@@ -1,9 +1,12 @@
 import numpy as np
 import math
 import torch
-import argparse
-from collections import namedtuple
+import wandb
+import simstar
+import sys
+import os
 from tensorboardX import SummaryWriter
+from collections import namedtuple
 from simstarEnv import SimstarEnv
 from model import Model
 
@@ -11,75 +14,79 @@ from model import Model
 # training mode: 1      evaluation mode: 0
 TRAIN = 1
 
-# ./ EVALUATION_NAME_{EVALUATION_REWARD}
-EVALUATION_REWARD = 79025
+# ./trained_models/EVALUATION_NAME_{EVALUATION_REWARD};      will be used only if TRAIN = 0
+EVALUATION_REWARD = 123
 
-# "best" or "checkpoint"
+# "best" or "checkpoint";      will be used only if TRAIN = 0
 EVALUATION_NAME = "best"
 
-import wandb
-import simstar
-import sys
+# "StraightRoad", "CircularRoad", "DutchGrandPrix", "HungaryGrandPrix"
+TRACK_NAME = simstar.Environments.HungaryGrandPrix
 
-
-TRACK_NAME = simstar.Environments.CircularRoad
-PORT = 8080
+# port number has to be the same with the SimStar.sh -nullrhi -api-port=PORT
+PORT = 8081
 HOST = "127.0.0.1"
-WITH_OPPONENT = False
-SYNC_MODE = True
-SPEED_UP = 6
 
-if len(sys.argv)>1:
+# bot vehicles will be added; the configuration and speed of other vehicles could be changed from simstarEnv.py
+WITH_OPPONENT = True
+
+# when the process is required to be speeded up, the synchronized mode will have to be turned on
+SYNC_MODE = False
+
+# times speeding up the training process [1-10]
+SPEED_UP = 1
+
+
+# port number can be updated from console argument
+if len(sys.argv) > 1:
     PORT = int(sys.argv[1])
-    print("Override PORT",PORT)
+    print("Port is Overwritten: ", PORT)
 
 
-# check if simstar open 
+# create model saving folders
+if not os.path.exists('saved_models'):
+    os.mkdir('saved_models')
+if not os.path.exists('trained_models'):
+    os.mkdir('trained_models')
+
+
+# check whether simstar is open
 try:
     simstar.Client(host=HOST, port=PORT)
-except simstar.TimeoutError or simstar.TransportError :
+except simstar.TimeoutError or simstar.TransportError:
     raise simstar.TransportError("******* Make sure a Simstar instance is open and running at port %d*******"%(PORT))
 
+
+# NOTE: users should create their own username (entity) and project in https://wandb.ai/
+# initialize data logging configurations
 wandb.init(project='final-p', entity='ferhatmelih', config={
     "TRACK_NAME": TRACK_NAME,
     "PORT": PORT,
-    'WITH_OPPONENT':WITH_OPPONENT,
-    'SPEED_UP':SPEED_UP,
+    'WITH_OPPONENT': WITH_OPPONENT,
+    'SPEED_UP': SPEED_UP,
 })
 wandb_config = wandb.config
 
 
-
+# main training function
 def train():
-    env = SimstarEnv(track=TRACK_NAME,
-            add_opponents=WITH_OPPONENT,synronized_mode=SYNC_MODE,speed_up=SPEED_UP,
-            host=HOST,port=PORT)
-    insize = 4 + env.track_sensor_size
+    env = SimstarEnv(track=TRACK_NAME, add_opponents=WITH_OPPONENT, synronized_mode=SYNC_MODE, speed_up=SPEED_UP, host=HOST, port=PORT)
+    
+    insize = 4 + env.track_sensor_size + env.opponent_sensor_size
     outsize = env.action_space.shape[0]
 
-    insize += env.opponent_sensor_size
-
+    # default hyper-parameters, has to be modified if required
     hyperparams = {
-        "lrvalue": 0.0005,
-        "lrpolicy": 0.0001,
-        "gamma": 0.97,
+        "lrvalue": 0.001, # 0.0005
+        "lrpolicy": 0.001, # 0.0001
+        "gamma": 0.99, # 0.97
         "episodes": 50000,
         "buffersize": 100000,
         "tau": 0.001,
         "batchsize": 64,
-        "start_sigma": 0.3,
-        "end_sigma": 0,
-        "sigma_decay_len": 15000,
-        "theta": 0.15,
-        "polyak": 0.995,
         "alpha": 0.2,
         "maxlength": 10000,
-        "clipgrad": True,
-        "hidden": 256,
-        "total_explore": 300000.0,
-        "epsilon_steady_state": 0.01,
-        "epsilon_start": 0.5,
-        "autopilot_other_agents": True
+        "hidden": 256
     }
     HyperParams = namedtuple("HyperParams", hyperparams.keys())
     hyprm = HyperParams(**hyperparams)
@@ -140,7 +147,7 @@ def train():
         lap_progress = env.progress_on_road
 
         if TRAIN:
-            if (eps+1) % 100 == 0:
+            if (eps + 1) % 100 == 0:
                 print("Checkpoint is Saved !")
                 save_model(agent=agent, reward=episode_reward, name="checkpoint")
 
@@ -149,9 +156,9 @@ def train():
                 best_reward = episode_reward
                 save_model(agent=agent, reward=best_reward, name="best")
         
-            tensorboard_writer(writer, eps+1, step, total_average_reward, average_reward, episode_reward, best_reward, total_steps,lap_progress)
+            tensorboard_writer(writer, eps+1, step, total_average_reward, average_reward, episode_reward, best_reward, total_steps, lap_progress*100)
 
-        print("\nProcess: {:2.1f}%, Total Steps: {:d},  Episode Reward: {:2.3f},  Best Reward: {:2.2f},  Total Average Reward: {:2.2f}\n".format(process, total_steps, episode_reward, best_reward, total_average_reward), flush=True)
+        print("\nProcess: {:2.1f}%, Total Steps: {:d},  Episode Reward: {:2.3f},  Best Reward: {:2.2f},  Total Average Reward: {:2.2f}, Lap Progress (%): {:2.1f}\n".format(process, total_steps, episode_reward, best_reward, total_average_reward, lap_progress*100), flush=True)
     print("")
 
 
@@ -161,27 +168,28 @@ def average_calculation(prev_avg, num_episodes, new_val):
     return np.float(total / num_episodes)
 
 
-def tensorboard_writer(writer, eps, step_number, total_average_reward, average_reward, episode_reward, best_reward, total_steps,
-    lap_progress):
+def tensorboard_writer(writer, eps, step_number, total_average_reward, average_reward, episode_reward, best_reward, total_steps, lap_progress):
     writer.add_scalar("step number - episode" , step_number, eps)
     writer.add_scalar("episode reward", episode_reward, eps)
     writer.add_scalar("average reward - episode", average_reward, eps)
-    writer.add_scalar("total average reward - episode", total_average_reward, eps)
     writer.add_scalar("average reward - total steps", average_reward, total_steps)
+    writer.add_scalar("total average reward - episode", total_average_reward, eps)
     writer.add_scalar("total average reward - total steps", total_average_reward, total_steps)
     writer.add_scalar("best reward - episode", best_reward, eps)
     writer.add_scalar("best reward - total steps", best_reward, total_steps)
+    writer.add_scalar("lap progress - episode", lap_progress, eps)
+    writer.add_scalar("lap progress - total steps", lap_progress, total_steps)
 
-    wandb.log({"step number":step_number,"episode":eps,"episode reward": episode_reward,
-        "average reward": average_reward, "total average reward":total_average_reward, 
-        "best reward": best_reward, "total_steps":total_steps,
-        "lap_progress":lap_progress
+    wandb.log({
+        "step number": step_number,
+        "episode": eps,
+        "episode_reward": episode_reward,
+        "average_reward": average_reward,
+        "total_average_reward": total_average_reward, 
+        "best_reward": best_reward,
+        "total_steps": total_steps,
+        "lap_progress": lap_progress
         })
-
-
-
-
-
 
 
 def save_model(agent, reward, name):
