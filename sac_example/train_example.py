@@ -21,7 +21,7 @@ EVALUATION_REWARD = 123
 EVALUATION_NAME = "best"
 
 # "StraightRoad", "CircularRoad", "DutchGrandPrix", "HungaryGrandPrix"
-TRACK_NAME = simstar.Environments.CircularRoad
+TRACK_NAME = simstar.Environments.HungaryGrandPrix
 
 # port number has to be the same with the SimStar.sh -nullrhi -api-port=PORT
 PORT = 8080
@@ -51,7 +51,7 @@ if not os.path.exists('trained_models'):
 
 # NOTE: users should create their own username (entity) and project in https://wandb.ai/
 # initialize data logging configurations
-wandb.init(project='final-p', entity='ferhatmelih', config={
+wandb.init(project='project', entity='blg638e', config={
     "TRACK_NAME": TRACK_NAME,
     "PORT": PORT,
     'WITH_OPPONENT': WITH_OPPONENT,
@@ -71,9 +71,9 @@ def train():
     hyperparams = {
         "lrvalue": 0.001, # 0.0005
         "lrpolicy": 0.001, # 0.0001
-        "gamma": 0.99, # 0.97
+        "gamma": 0.97, # 0.97
         "episodes": 50000,
-        "buffersize": 100000,
+        "buffersize": 1000000,
         "tau": 0.001,
         "batchsize": 64,
         "alpha": 0.2,

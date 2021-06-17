@@ -12,9 +12,7 @@ except ImportError:
 
 
 class SimstarEnv(gym.Env):
-    def __init__(self, track=simstar.Environments.DutchGrandPrix, 
-            add_opponents=False, synronized_mode=False,
-            speed_up=1, host="127.0.0.1", port=8080):
+    def __init__(self, track=simstar.Environments.DutchGrandPrix, add_opponents=False, synronized_mode=False, speed_up=1, host="127.0.0.1", port=8080):
         self.new_reward = True # applies reward configuration as in GTS paper's
         self.spx_prev = 0 # ego vehicle speed at time t-1
         self.c_w = 0.005 # out of track penalty weight
@@ -37,7 +35,7 @@ class SimstarEnv(gym.Env):
 
         self.time_step = 0
         self.terminal_judge_start = 100 # if ego vehicle does not have progress for 100 steps, terminate
-        self.termination_limit_progress = 5 # if progress of the ego vehicle is less than 5 for 100 steps, terminate
+        self.termination_limit_progress = 0.6 # if progress of the ego vehicle is less than 0.6 for 100 steps, terminate
 
         # the type of race track to generate 
         self.track_name = track
@@ -108,11 +106,9 @@ class SimstarEnv(gym.Env):
         # spawn a vehicle
         if self.track_name == simstar.Environments.DutchGrandPrix:
             vehicle_pose = simstar.PoseData(-603.631592, -225.756531, -3.999999, yaw=20/50)
-            self.main_vehicle  = self.client.spawn_vehicle_to(
-                vehicle_pose, initial_speed=0, set_speed=self.set_ego_speed, vehicle_type=simstar.EVehicleType.Sedan1)
+            self.main_vehicle  = self.client.spawn_vehicle_to(vehicle_pose, initial_speed=0, set_speed=self.set_ego_speed, vehicle_type=simstar.EVehicleType.Sedan1)
         else:
-            self.main_vehicle = self.client.spawn_vehicle(
-                distance=self.ego_start_offset, lane_id=self.ego_lane_id, initial_speed=0, set_speed=self.set_ego_speed, vehicle_type = simstar.EVehicleType.Sedan1)
+            self.main_vehicle = self.client.spawn_vehicle(distance=self.ego_start_offset, lane_id=self.ego_lane_id, initial_speed=0, set_speed=self.set_ego_speed, vehicle_type = simstar.EVehicleType.Sedan1)
         
         self.simstar_step()
         print("[SimstarEnv] main vehicle ID: ",self.main_vehicle.get_ID())
@@ -125,8 +121,7 @@ class SimstarEnv(gym.Env):
 
             # define other vehicles with set speeds and initial locations
             for i in range(self.number_of_opponents):
-                new_agent = self.client.spawn_vehicle(
-                    actor=self.main_vehicle, distance=self.agent_locations[i], lane_id=self.lane_ids[i], initial_speed=0, set_speed=self.agent_speeds[i])
+                new_agent = self.client.spawn_vehicle(actor=self.main_vehicle, distance=self.agent_locations[i], lane_id=self.lane_ids[i], initial_speed=0, set_speed=self.agent_speeds[i])
 
                 time.sleep(0.2)
                 self.simstar_step()
@@ -182,7 +177,6 @@ class SimstarEnv(gym.Env):
         spx = simstar_obs['speedX']
 
         if self.new_reward:
-
             if np.abs(trackPos) >= 0.9:
                 self.p_w = 1
             else:
@@ -323,8 +317,6 @@ class SimstarEnv(gym.Env):
 
     def get_simstar_obs(self, action):
         self.action_to_simstar(action)
-
-        
 
         vehicle_state = self.main_vehicle.get_vehicle_state_self_frame()
         speed_x_kmh = abs(self.ms_to_kmh(float(vehicle_state['velocity']['X_v'])))
